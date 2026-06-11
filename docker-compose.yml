@@ -1,0 +1,7 @@
+services:
+  chord-trainer:
+    build: .
+    container_name: chord-trainer
+    ports:
+      - "3001:80"
+    restart: unless-stopped
