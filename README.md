@@ -61,7 +61,7 @@ Final Docker image is ~25MB. No database, no backend, no external API calls — 
 ### Option 1 — Docker (recommended for self-hosting)
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/chord-trainer.git
+git clone https://github.com/medoror/chord-trainer.git
 cd chord-trainer
 
 docker compose up -d
@@ -79,7 +79,7 @@ npm install
 npm run dev
 ```
 
-App runs at `http://localhost:3001` with hot reload.
+App runs at `http://localhost:3000` with hot reload.
 
 ### Option 3 — Build and preview
 
@@ -92,3 +92,76 @@ npm run preview
 ---
 
 ## Project Structure
+chord-trainer/
+├── src/
+│   ├── App.jsx          # Entire application (single component file)
+│   └── main.jsx         # React entry point
+├── index.html           # HTML shell
+├── vite.config.js       # Vite config (host 0.0.0.0, port 3000)
+├── Dockerfile           # Multi-stage: Node build → nginx serve
+├── docker-compose.yml   # One-command startup
+├── nginx.conf           # SPA routing + gzip + asset caching
+└── package.json
+
+---
+
+## Configuration
+
+### Change the port
+
+Edit `docker-compose.yml`:
+
+```yaml
+ports:
+  - "8080:80"   # expose on port 8080 instead
+```
+
+Rebuild:
+```bash
+docker compose down && docker compose up -d
+```
+
+---
+
+## Deploying Updates
+
+After editing `src/App.jsx`:
+
+```bash
+docker compose down
+docker compose up -d --build
+```
+
+Or without downtime using a rolling restart:
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+---
+
+## Chord Data
+
+All chord fingerings are verified for **DGBE tuning** (standard baritone ukulele / same as top 4 guitar strings). The app covers:
+
+- 15 major keys (C G D A E B F# C# F Bb Eb Ab Db Gb Cb)
+- 12 natural minor keys (Am Em Bm F#m C#m G#m Dm Gm Cm Fm Bbm Ebm)
+- 57 individual chord fingerings including all enharmonic equivalents
+- Dim, 7th, and extended chords
+
+---
+
+## Contributing
+
+This is a personal project but PRs are welcome. Most useful contributions:
+
+- **Chord fingering corrections** — open an issue with the chord name, current fingering, and correct fingering with a source
+- **Additional chords** — add to the `BARI_CHORDS` object in `src/App.jsx`
+- **Theory quiz questions** — add to the `THEORY_QS` array
+
+---
+
+## License
+
+MIT — do whatever you want with it.
