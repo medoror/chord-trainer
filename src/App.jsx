@@ -142,14 +142,6 @@ const BARI_CHORDS = {
 };
 
 
-// Groups for chord browser — organized by key family
-const CHORD_GROUPS = [
-  { label:"Major",   chords:["C","D","E","F","G","A","B","Bb","Eb","Ab","F#","C#","Db","Gb","Cb","Fb"] },
-  { label:"Minor",   chords:["Am","Bm","Cm","Dm","Em","Fm","Gm","F#m","C#m","G#m","Bbm","Ebm","D#m","A#m","Dbm","E#m","Abm","Gbm"] },
-  { label:"Dim",     chords:["Bdim","C#dim","Ddim","Edim","F#dim","G#dim","A#dim","Adim","Cdim","Fdim","Gdim","Bbdim","E#dim","B#dim","D#dim"] },
-  { label:"7th",     chords:["A7","B7","C7","D7","E7","F7","G7"] },
-];
-
 // ── MUSIC THEORY DATA ─────────────────────────────────────────────────────────
 const MAJOR_CHART = {
   C:{I:"C",ii:"Dm",iii:"Em",IV:"F",V:"G",vi:"Am",vii:"Bdim"},
@@ -197,6 +189,85 @@ const HEAT_COLOR=h=>{
 };
 const MAJOR_PC={I:"#c9a84c",ii:"#7eb8f7",iii:"#7eb8f7",IV:"#c9a84c",V:"#c9a84c",vi:"#7eb8f7",vii:"#a78bfa"};
 const MINOR_PC={i:"#7eb8f7","ii°":"#a78bfa",III:"#c9a84c",iv:"#7eb8f7",v:"#7eb8f7",VI:"#c9a84c",VII:"#c9a84c"};
+
+// ── PROGRESSION SONG ANCHORS ──────────────────────────────────────────────────
+// Static roman-numeral templates — actual chord names get substituted per key at render time
+const PROGRESSION_TEMPLATES={
+  major:[
+    {roman:["I","V","vi","IV"],mood:"Bright, familiar, resolved. The backbone of countless pop songs."},
+    {roman:["I","vi","IV","V"],mood:"Warm and nostalgic — the classic 50s doo-wop feel."},
+    {roman:["I","IV","V"],mood:"Open and straightforward. Three chords, infinite songs."},
+  ],
+  minor:[
+    {roman:["i","VI","VII"],mood:"A driving minor anthem feel. Dark but singable."},
+    {roman:["i","VII","VI","V"],mood:"A descending, dramatic pull — the Andalusian cadence."},
+    {roman:["i","iv","v"],mood:"Pure and resolved minor — moody but grounded."},
+  ],
+};
+
+// ── CIRCLE OF FIFTHS ──────────────────────────────────────────────────────────
+// Clockwise order, each minor is the relative minor of the major at the same index
+const CIRCLE_MAJORS=["C","G","D","A","E","B","F#","Db","Ab","Eb","Bb","F"];
+const CIRCLE_MINORS=["Am","Em","Bm","F#m","C#m","G#m","Ebm","Bbm","Fm","Cm","Gm","Dm"];
+const FAMILY_COLOR={natural:"#c9a84c",sharp:"#a78bfa",flat:"#7eb8f7"};
+function keyFamily(k){
+  const letter=k.replace("m","");
+  if(letter.includes("#")) return "sharp";
+  if(letter.includes("b")) return "flat";
+  return "natural";
+}
+
+function CircleOfFifths({selectedKey,selectedIsMinor,onTapMajor,onTapMinor}){
+  const cx=150,cy=150,outerR=118,innerR=72;
+  const ring=selectedIsMinor?CIRCLE_MINORS:CIRCLE_MAJORS;
+  const selectedIdx=selectedKey==null?-1:ring.indexOf(selectedKey);
+  const vIdx=selectedIdx>=0?(selectedIdx+1)%12:-1;
+  const ivIdx=selectedIdx>=0?(selectedIdx+11)%12:-1;
+
+  const wedgeStyle=(idx,isMinorRing,name)=>{
+    if(selectedIdx<0) return {fill:FAMILY_COLOR[keyFamily(name)],opacity:0.85};
+    if(isMinorRing!==selectedIsMinor) return {fill:"#333350",opacity:0.22};
+    if(idx===selectedIdx) return {fill:"#c9a84c",stroke:"#f5e6c8",strokeWidth:2.5,opacity:1};
+    if(idx===vIdx) return {fill:"#4ade80",opacity:0.9};
+    if(idx===ivIdx) return {fill:"#7eb8f7",opacity:0.9};
+    return {fill:"#333350",opacity:0.3};
+  };
+
+  const pos=(r,idx)=>{
+    const angle=(idx*30-90)*Math.PI/180;
+    return [cx+r*Math.cos(angle),cy+r*Math.sin(angle)];
+  };
+
+  return(
+    <svg viewBox="0 0 300 300" style={{width:"100%",maxWidth:"340px",display:"block",margin:"0 auto"}}>
+      {CIRCLE_MAJORS.map((_,idx)=>{
+        const [ox,oy]=pos(outerR,idx);
+        const [ix,iy]=pos(innerR,idx);
+        return <line key={"l"+idx} x1={ix} y1={iy} x2={ox} y2={oy} stroke="#2a2a3e" strokeWidth="1"/>;
+      })}
+      {CIRCLE_MAJORS.map((maj,idx)=>{
+        const [x,y]=pos(outerR,idx);
+        const st=wedgeStyle(idx,false,maj);
+        return(
+          <g key={maj} onClick={()=>onTapMajor(maj)} style={{cursor:"pointer"}}>
+            <circle cx={x} cy={y} r="24" fill={st.fill} opacity={st.opacity} stroke={st.stroke||"none"} strokeWidth={st.strokeWidth||0}/>
+            <text x={x} y={y+6} textAnchor="middle" fontSize="17" fontFamily="Georgia,serif" fontWeight="bold" fill="#0f0f14">{maj}</text>
+          </g>
+        );
+      })}
+      {CIRCLE_MINORS.map((min,idx)=>{
+        const [x,y]=pos(innerR,idx);
+        const st=wedgeStyle(idx,true,min);
+        return(
+          <g key={min} onClick={()=>onTapMinor(min)} style={{cursor:"pointer"}}>
+            <circle cx={x} cy={y} r="19" fill={st.fill} opacity={st.opacity} stroke={st.stroke||"none"} strokeWidth={st.strokeWidth||0}/>
+            <text x={x} y={y+5} textAnchor="middle" fontSize="12.5" fontFamily="Georgia,serif" fontWeight="bold" fill="#0f0f14">{min}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
 
 // ── CHEAT SHEET ───────────────────────────────────────────────────────────────
 const CHEAT_SECTIONS=[
@@ -411,6 +482,61 @@ function buildDistractors(correct, allChordNames){
     if(fb && fb !== correct && !result.includes(fb)) result.push(fb);
   }
   return result;
+}
+
+// ── SKIP-A-LETTER DRILL ───────────────────────────────────────────────────────
+// Chords stack in thirds by skipping one letter of the musical alphabet each time:
+// C (skip D) E (skip F) G. This holds for every root — only the accidentals change.
+const NOTE_LETTERS=["A","B","C","D","E","F","G"];
+const ACCIDENTAL_FOR_DIFF={"-2":"bb","-1":"b","0":"","1":"#","2":"##"};
+
+function pitchClassOf(note){
+  const idx=CHROMATIC.indexOf(note);
+  if(idx!==-1) return idx;
+  const enh=ENHARMONIC[note];
+  return enh?CHROMATIC.indexOf(enh):0;
+}
+
+function spellNote(letter,targetPc){
+  const diff=(((targetPc-pitchClassOf(letter))%12)+18)%12-6; // normalized to [-6,5]
+  return letter+(ACCIDENTAL_FOR_DIFF[diff]||"");
+}
+
+// 7 natural-letter roots (major + minor) plus the common sharp/flat keys from the Circle of Fifths
+const SKIP_ROOTS=["C","D","E","F","G","A","B","F#","Db","Ab","Eb","Bb",
+                   "Cm","Dm","Em","Fm","Gm","Am","Bm","F#m","C#m","G#m","Ebm","Bbm"];
+
+function buildSkipItem(root){
+  const isMinor=root.endsWith("m");
+  const bareRoot=isMinor?root.slice(0,-1):root;
+  const rootLetter=bareRoot[0];
+  const rootPc=pitchClassOf(bareRoot);
+  const li=NOTE_LETTERS.indexOf(rootLetter);
+  const thirdLetter=NOTE_LETTERS[(li+2)%7];
+  const skippedLetter=NOTE_LETTERS[(li+1)%7];
+  const fifthLetter=NOTE_LETTERS[(li+4)%7];
+  const third=spellNote(thirdLetter,(rootPc+(isMinor?3:4))%12);
+  const fifth=spellNote(fifthLetter,(rootPc+7)%12);
+  const wrongQualityThird=spellNote(thirdLetter,(rootPc+(isMinor?4:3))%12);
+  return {
+    root, label:`${bareRoot} ${isMinor?"minor":"major"}`, isMinor,
+    stack:`${bareRoot}-${third}-${fifth}`,
+    wrongLetterStack:`${bareRoot}-${skippedLetter}-${fifth}`,
+    wrongQualityStack:`${bareRoot}-${wrongQualityThird}-${fifth}`,
+    spanLetters:[0,1,2,3,4].map(o=>NOTE_LETTERS[(li+o)%7]),
+  };
+}
+const SKIP_ITEMS=SKIP_ROOTS.map(buildSkipItem);
+
+function buildSkipChoices(item){
+  const set=new Set([item.stack,item.wrongLetterStack,item.wrongQualityStack]);
+  let guard=0;
+  while(set.size<4&&guard<20){
+    const other=SKIP_ITEMS[Math.floor(Math.random()*SKIP_ITEMS.length)];
+    if(other.root!==item.root) set.add(other.stack);
+    guard++;
+  }
+  return shuffle([...set]).slice(0,4);
 }
 
 // ── THEORY QUIZ QUESTIONS ─────────────────────────────────────────────────────
@@ -683,26 +809,83 @@ const THEORY_QS = [
 
 const THEORY_CATEGORIES = [...new Set(THEORY_QS.map(q=>q.category))];
 
+// ── PERSISTENCE ───────────────────────────────────────────────────────────────
+const PROGRESS_KEY = "chord-trainer-progress";
+
+function loadProgress(){
+  try{
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch{
+    return null;
+  }
+}
+
+function saveProgress(progress){
+  try{
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  } catch{
+    // localStorage unavailable (private mode, quota, etc.) — state stays in-memory only
+  }
+}
+
+function todayString(){
+  return new Date().toISOString().slice(0,10);
+}
+
+// Picks the root of the highest-weighted weak chord entry ("key|position" → key)
+function pickDailyKey(weakChordKeys){
+  const entries = Object.entries(weakChordKeys||{});
+  if(entries.length===0) return "C";
+  const [topEntry] = entries.sort(([,a],[,b])=>b-a);
+  return topEntry[0].split("|")[0];
+}
+
+// ── TIMED REFLEX MODE ─────────────────────────────────────────────────────────
+const TIMEOUT_SENTINEL="__timeout__";
+const TIMEOUT_CHOICE={text:"(timed out)",correct:false};
+
+// Renders a shrinking bar that fires onTimeout once after `seconds`. The parent
+// mounts this only while a question is unanswered — unmounting on answer cancels the timer for free.
+function CountdownBar({seconds=8,onTimeout}){
+  const [pct,setPct]=useState(100);
+  useEffect(()=>{
+    const raf=requestAnimationFrame(()=>setPct(0));
+    const timer=setTimeout(onTimeout,seconds*1000);
+    return ()=>{cancelAnimationFrame(raf);clearTimeout(timer);};
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+  return (
+    <div style={S.countdownTrack}>
+      <div style={{...S.countdownFill,width:`${pct}%`,transition:`width ${seconds}s linear`}}/>
+    </div>
+  );
+}
+
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 export default function ChordQuiz(){
-  const [tab,setTab]             = useState("home");
+  const [tab,setTab]             = useState("circle");
+  const [drillSub,setDrillSub]   = useState("chords"); // chords | theory
+  const [keysSub,setKeysSub]     = useState("explorer"); // explorer | charts
   const [chartMode,setChartMode] = useState("major");
   const [heatOn,setHeatOn]       = useState(true);
   const [quizMode,setQuizMode]   = useState("major");
   const [question,setQuestion]   = useState(null);
   const [selected,setSelected]   = useState(null);
   const [isCorrect,setIsCorrect] = useState(null);
+  const [showFingering,setShowFingering]=useState(false);
   const [score,setScore]         = useState({correct:0,total:0});
   const [streak,setStreak]       = useState(0);
   const [bestStreak,setBestStreak]=useState(0);
-  const [weaknesses,setWeaknesses]=useState([]);
-  const [weaknessMap,setWeaknessMap]=useState({});
+  const [weaknessMap,setWeaknessMap]=useState(()=>loadProgress()?.weakChordKeys||{});
+  const [weaknesses,setWeaknesses]=useState(()=>{
+    const map=loadProgress()?.weakChordKeys||{};
+    return Object.entries(map).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a).slice(0,10).map(([k])=>k);
+  });
   const [showStreak,setShowStreak]=useState(false);
   const [filter,setFilter]       = useState("all");
   const [highlightKey,setHighlightKey]=useState(null);
   const [openSection,setOpenSection]=useState("progressions");
-  const [diagGroup,setDiagGroup] = useState("Major");
-  const [selectedChord,setSelectedChord]=useState(null);
   // Theory quiz state
   const [theoryQ,setTheoryQ]       = useState(null);
   const [theorySelected,setTheorySelected]=useState(null);
@@ -711,7 +894,46 @@ export default function ChordQuiz(){
   const [theoryCat,setTheoryCat]   = useState("all");
   const [theoryStreak,setTheoryStreak]=useState(0);
   const [theoryBest,setTheoryBest] = useState(0);
-  const [theoryWeakIds,setTheoryWeakIds]=useState([]);
+  const [theoryWeakIds,setTheoryWeakIds]=useState(()=>loadProgress()?.weakTheoryIds||[]);
+  // Skip-a-Letter drill weakness — persisted now, drill itself lands in a later phase
+  const [skipWeakIds,setSkipWeakIds]=useState(()=>loadProgress()?.weakSkipIds||[]);
+  // Daily focus key
+  const [dailyKey,setDailyKey]=useState(()=>{
+    const p=loadProgress();
+    return (p?.dailyKeyDate===todayString()) ? p.dailyKey : pickDailyKey(p?.weakChordKeys);
+  });
+  const [dailyKeyDate,setDailyKeyDate]=useState(()=>{
+    const p=loadProgress();
+    return (p?.dailyKeyDate===todayString()) ? p.dailyKeyDate : todayString();
+  });
+  const [sessionCount]=useState(()=>(loadProgress()?.sessionCount||0)+1);
+  const [focusKey,setFocusKey]=useState(null);
+  // Circle of Fifths state
+  const [circleKey,setCircleKey]=useState(null);
+  const [circleIsMinor,setCircleIsMinor]=useState(false);
+  const [showCircleHelp,setShowCircleHelp]=useState(false);
+  const [tooltipDismissed,setTooltipDismissed]=useState(false);
+  // Skip-a-Letter drill state
+  const [skipQ,setSkipQ]=useState(null);
+  const [skipSelected,setSkipSelected]=useState(null);
+  const [skipCorrect,setSkipCorrect]=useState(null);
+  const [skipScore,setSkipScore]=useState({correct:0,total:0});
+  const [skipStreak,setSkipStreak]=useState(0);
+  const [skipBest,setSkipBest]=useState(0);
+  // Timed reflex mode
+  const [timedMode,setTimedMode]=useState(()=>loadProgress()?.timedMode||false);
+
+  useEffect(()=>{
+    saveProgress({
+      weakChordKeys: weaknessMap,
+      weakTheoryIds: theoryWeakIds,
+      weakSkipIds: skipWeakIds,
+      timedMode,
+      dailyKey,
+      dailyKeyDate,
+      sessionCount,
+    });
+  },[weaknessMap,theoryWeakIds,skipWeakIds,timedMode,dailyKey,dailyKeyDate,sessionCount]);
 
   const chart    =quizMode==="major"?MAJOR_CHART:MINOR_CHART;
   const allKeys  =quizMode==="major"?MAJOR_KEYS:MINOR_KEYS;
@@ -726,9 +948,9 @@ export default function ChordQuiz(){
   },[filter,quizMode,allKeys]);
 
   const nextQuestion=useCallback(()=>{
-    const keys=filteredKeys();
+    const keys=focusKey?[focusKey]:filteredKeys();
     let key,position;
-    if(weaknesses.length>0&&Math.random()<0.6){
+    if(!focusKey&&weaknesses.length>0&&Math.random()<0.6){
       const w=weaknesses[Math.floor(Math.random()*weaknesses.length)];
       [key,position]=w.split("|");
       if(!keys.includes(key)) key=keys[Math.floor(Math.random()*keys.length)];
@@ -742,10 +964,10 @@ export default function ChordQuiz(){
     const distractors=buildDistractors(correct, allChordNames);
     const choices=shuffle([correct,...distractors]);
     setQuestion({key,position,correct,choices});
-    setSelected(null);setIsCorrect(null);
-  },[weaknesses,filteredKeys,chart,allKeys,positions]);
+    setSelected(null);setIsCorrect(null);setShowFingering(false);
+  },[weaknesses,filteredKeys,chart,allKeys,positions,focusKey]);
 
-  useEffect(()=>{if(tab==="quiz") nextQuestion();},[tab,quizMode]);
+  useEffect(()=>{if(tab==="drill"&&drillSub==="chords") nextQuestion();},[tab,drillSub,quizMode,focusKey]);
 
   const handleAnswer=(choice)=>{
     if(selected) return;
@@ -794,7 +1016,7 @@ export default function ChordQuiz(){
     setTheoryCorrect(null);
   },[theoryCat,theoryWeakIds]);
 
-  useEffect(()=>{if(tab==="theory") nextTheoryQ();},[tab,theoryCat]);
+  useEffect(()=>{if(tab==="drill"&&drillSub==="theory") nextTheoryQ();},[tab,drillSub,theoryCat]);
 
   const handleTheoryAnswer=(choice)=>{
     if(theorySelected) return;
@@ -814,6 +1036,52 @@ export default function ChordQuiz(){
 
   const theoryAccuracy=theoryScore.total>0?Math.round(theoryScore.correct/theoryScore.total*100):0;
 
+  // ── SKIP-A-LETTER DRILL LOGIC ────────────────────────────────────────────────
+  const nextSkipQuestion=useCallback(()=>{
+    let item;
+    if(skipWeakIds.length>0 && Math.random()<0.6){
+      const weakPool=SKIP_ITEMS.filter(it=>skipWeakIds.includes(it.root));
+      item = weakPool.length>0
+        ? weakPool[Math.floor(Math.random()*weakPool.length)]
+        : SKIP_ITEMS[Math.floor(Math.random()*SKIP_ITEMS.length)];
+    } else {
+      item = SKIP_ITEMS[Math.floor(Math.random()*SKIP_ITEMS.length)];
+    }
+    setSkipQ({...item,choices:buildSkipChoices(item)});
+    setSkipSelected(null);
+    setSkipCorrect(null);
+  },[skipWeakIds]);
+
+  useEffect(()=>{if(tab==="drill"&&drillSub==="skip") nextSkipQuestion();},[tab,drillSub]);
+
+  const handleSkipAnswer=(choice)=>{
+    if(skipSelected) return;
+    setSkipSelected(choice);
+    const correct=choice===skipQ.stack;
+    setSkipCorrect(correct);
+    setSkipScore(s=>({correct:s.correct+(correct?1:0),total:s.total+1}));
+    if(correct){
+      const ns=skipStreak+1; setSkipStreak(ns);
+      if(ns>skipBest) setSkipBest(ns);
+      setSkipWeakIds(ids=>ids.filter(id=>id!==skipQ.root));
+    } else {
+      setSkipStreak(0);
+      setSkipWeakIds(ids=>ids.includes(skipQ.root)?ids:[...ids,skipQ.root]);
+    }
+  };
+
+  const skipAccuracy=skipScore.total>0?Math.round(skipScore.correct/skipScore.total*100):0;
+
+  useEffect(()=>{
+    if(selected===TIMEOUT_SENTINEL){const t=setTimeout(nextQuestion,1200);return ()=>clearTimeout(t);}
+  },[selected]);
+  useEffect(()=>{
+    if(theorySelected===TIMEOUT_CHOICE){const t=setTimeout(nextTheoryQ,1200);return ()=>clearTimeout(t);}
+  },[theorySelected]);
+  useEffect(()=>{
+    if(skipSelected===TIMEOUT_SENTINEL){const t=setTimeout(nextSkipQuestion,1200);return ()=>clearTimeout(t);}
+  },[skipSelected]);
+
   // Keys explorer state
   const [keysMode,setKeysMode]   = useState("major"); // major | minor
   const [selectedKey,setSelectedKey] = useState("C");
@@ -821,13 +1089,8 @@ export default function ChordQuiz(){
 
   const NavBar=()=>(
     <div style={S.navbar}>
-      {[["home","🏠","Home"],["quiz","🎯","Chords"],["theory","🧠","Theory"],["keys","🗝️","Keys"],["chart","📋","Charts"],["cheat","💡","Tips"]].map(([id,icon,label])=>(
-        <button key={id} style={{...S.navBtn,...(tab===id?S.navActive:{})}}
-          onClick={()=>{
-            if(id==="quiz"){setScore({correct:0,total:0});setStreak(0);}
-            if(id==="theory"){setTheoryScore({correct:0,total:0});setTheoryStreak(0);}
-            setTab(id);
-          }}>
+      {[["circle","🎵","Circle"],["drill","🎯","Drill"],["keys","🗝️","Keys"],["tips","💡","Tips"]].map(([id,icon,label])=>(
+        <button key={id} style={{...S.navBtn,...(tab===id?S.navActive:{})}} onClick={()=>setTab(id)}>
           <span style={{fontSize:"16px"}}>{icon}</span>
           <span style={S.navLabel}>{label}</span>
         </button>
@@ -835,66 +1098,168 @@ export default function ChordQuiz(){
     </div>
   );
 
-  // HOME
-  if(tab==="home") return(
-    <div style={S.page}>
-      <div style={S.card}>
-        <div style={{fontSize:"46px",textAlign:"center",marginBottom:"8px"}}>🎸</div>
-        <h1 style={S.title}>Chord Chart Trainer</h1>
-        <p style={S.sub}>Baritone Uke · DGBE · Major & Minor</p>
-        <div style={S.sectionLabel}>Quiz mode</div>
-        <div style={{display:"flex",gap:"8px",marginBottom:"16px"}}>
-          {["major","minor"].map(m=>(
-            <button key={m} style={{...S.modeBtn,...(quizMode===m?S.modeBtnOn:{})}} onClick={()=>setQuizMode(m)}>
-              {m==="major"?"🌞 Major":"🌙 Minor"}
-            </button>
-          ))}
-        </div>
-        {quizMode==="major"&&(<>
-          <div style={S.sectionLabel}>Key filter</div>
-          <div style={S.filterRow}>
-            {["all","naturals","sharps","flats"].map(f=>(
-              <button key={f} style={{...S.filterBtn,...(filter===f?S.filterOn:{})}} onClick={()=>setFilter(f)}>
-                {f==="all"?"All":f.charAt(0).toUpperCase()+f.slice(1)}
-              </button>
-            ))}
-          </div>
-        </>)}
-        <button style={S.startBtn} onClick={()=>{setScore({correct:0,total:0});setStreak(0);setTab("quiz");}}>
-          🎯 Start Chord Quiz
-        </button>
-        <button style={{...S.startBtn,background:"#4a6a8a",marginBottom:"10px"}} onClick={()=>{setTheoryScore({correct:0,total:0});setTheoryStreak(0);setTab("theory");}}>
-          🧠 Start Theory Quiz
-        </button>
-        <div style={{display:"flex",gap:"8px",marginBottom:"8px"}}>
-          <button style={{...S.outlineBtn,flex:1,marginBottom:0}} onClick={()=>setTab("keys")}>🗝️ Key Explorer</button>
-          <button style={{...S.outlineBtn,flex:1,marginBottom:0}} onClick={()=>setTab("chart")}>📋 Charts</button>
-        </div>
-        <button style={{...S.outlineBtn,marginBottom:0}} onClick={()=>setTab("cheat")}>💡 Theory Cheat Sheet</button>
-        {score.total>0&&<div style={{...S.lastScore,marginTop:"14px"}}>Chords: {score.correct}/{score.total} ({accuracy}%) · Best streak: {bestStreak}</div>}
-        {theoryScore.total>0&&<div style={{...S.lastScore,marginTop:"4px"}}>Theory: {theoryScore.correct}/{theoryScore.total} ({theoryAccuracy}%) · Best streak: {theoryBest}</div>}
+  const DrillSubNav=()=>(
+    <>
+      <div style={{display:"flex",gap:"6px",marginBottom:"8px"}}>
+        {[["chords","🎯 Chords"],["theory","🧠 Theory"],["skip","🔤 Skip"]].map(([id,label])=>(
+          <button key={id} style={{...S.filterBtn,...(drillSub===id?S.filterOn:{}),flex:1,fontSize:"12px",padding:"6px 4px"}} onClick={()=>setDrillSub(id)}>
+            {label}
+          </button>
+        ))}
       </div>
-      <NavBar/>
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:"14px"}}>
+        <button style={{...S.filterBtn,...(timedMode?S.filterOn:{}),fontSize:"11px"}} onClick={()=>setTimedMode(t=>!t)}>
+          ⏱ Timed {timedMode?"ON":"OFF"}
+        </button>
+      </div>
+    </>
+  );
+
+  const KeysSubNav=()=>(
+    <div style={{display:"flex",gap:"8px",marginBottom:"14px"}}>
+      {[["explorer","🗝️ Explorer"],["charts","📋 Charts"]].map(([id,label])=>(
+        <button key={id} style={{...S.filterBtn,...(keysSub===id?S.filterOn:{}),flex:1}} onClick={()=>setKeysSub(id)}>
+          {label}
+        </button>
+      ))}
     </div>
   );
 
-  // QUIZ
-  if(tab==="quiz"&&question){
+  // CIRCLE OF FIFTHS (home screen)
+  if(tab==="circle"){
+    const isDailyMinor=MINOR_KEYS.includes(dailyKey);
+    const hasWeakData=Object.keys(weaknessMap).length>0;
+    const anchorChart=circleKey?(circleIsMinor?MINOR_CHART[circleKey]:MAJOR_CHART[circleKey]):null;
+    const anchors=anchorChart
+      ? (circleIsMinor?[["i",anchorChart.i],["iv",anchorChart.iv],["v",anchorChart.v]]
+                      :[["I",anchorChart.I],["IV",anchorChart.IV],["V",anchorChart.V]])
+      : [];
+    const tapKey=(key,isMinor)=>{
+      setTooltipDismissed(true);
+      setCircleKey(prev=>(prev===key&&circleIsMinor===isMinor)?null:key);
+      setCircleIsMinor(isMinor);
+    };
+
+    return(
+      <div style={S.page}>
+        <div style={S.card}>
+          <div style={S.dailyBanner} onClick={()=>{
+            setQuizMode(isDailyMinor?"minor":"major");
+            setFocusKey(dailyKey);
+            setDrillSub("chords");
+            setTab("drill");
+          }}>
+            <span>Today: <b>{dailyKey} {isDailyMinor?"minor":"major"}</b> — {hasWeakData?"your weakest key":"let's get started"}</span>
+            <span style={{opacity:0.6}}>→</span>
+          </div>
+
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:"14px",marginBottom:"2px"}}>
+            <h1 style={{...S.title,margin:0,fontSize:"22px"}}>🎵 Circle of Fifths</h1>
+            <button style={S.helpBtn} onClick={()=>setShowCircleHelp(true)}>❓</button>
+          </div>
+          <p style={{...S.sub,marginBottom:"10px"}}>Tap a key to see how it connects to its neighbors</p>
+
+          {sessionCount===1&&!tooltipDismissed&&!circleKey&&(
+            <div style={S.circleTip} onClick={()=>setTooltipDismissed(true)}>
+              💡 Keys next to each other share chords — tap around to see how.
+            </div>
+          )}
+
+          <CircleOfFifths selectedKey={circleKey} selectedIsMinor={circleIsMinor}
+            onTapMajor={(k)=>tapKey(k,false)} onTapMinor={(k)=>tapKey(k,true)}/>
+
+          <div style={{display:"flex",gap:"12px",justifyContent:"center",marginTop:"10px",flexWrap:"wrap"}}>
+            <span style={{color:"#c9a84c",fontSize:"11px",fontFamily:"sans-serif"}}>■ Natural</span>
+            <span style={{color:"#a78bfa",fontSize:"11px",fontFamily:"sans-serif"}}>■ Sharp</span>
+            <span style={{color:"#7eb8f7",fontSize:"11px",fontFamily:"sans-serif"}}>■ Flat</span>
+          </div>
+        </div>
+
+        <div style={{...S.slideUpPanel,transform:circleKey?"translateY(0)":"translateY(400px)"}}>
+          <button style={S.slideUpClose} onClick={()=>setCircleKey(null)}>✕</button>
+          {circleKey&&(<>
+            <div style={{color:"#f5e6c8",fontSize:"22px",fontWeight:"bold",fontFamily:"'Georgia',serif",marginBottom:"10px"}}>
+              {circleKey} {circleIsMinor?"minor":"major"}
+            </div>
+            <div style={{display:"flex",gap:"10px",marginBottom:"16px"}}>
+              {anchors.map(([pos,name])=>(
+                <div key={pos} style={S.anchorChip}>
+                  <div style={{fontSize:"11px",color:"#6b6b8a"}}>{pos}</div>
+                  <div style={{fontSize:"16px",fontWeight:"bold",color:"#f5e6c8"}}>{name}</div>
+                </div>
+              ))}
+            </div>
+            <button style={S.startBtn} onClick={()=>{
+              setKeysMode(circleIsMinor?"minor":"major");
+              setSelectedKey(circleKey);
+              setExpandedChord(null);
+              setKeysSub("explorer");
+              setTab("keys");
+            }}>
+              Explore this key →
+            </button>
+          </>)}
+        </div>
+
+        {showCircleHelp&&(
+          <div style={S.helpOverlay} onClick={()=>setShowCircleHelp(false)}>
+            <div style={S.helpCard} onClick={e=>e.stopPropagation()}>
+              <h2 style={{...S.title,fontSize:"18px",marginBottom:"10px"}}>Reading the Circle</h2>
+              <p style={{color:"#b8b8d0",fontSize:"13px",fontFamily:"sans-serif",lineHeight:1.6,margin:"0 0 10px"}}>
+                Each step clockwise raises the key by a perfect fifth. Neighboring keys share most of their notes — that's why chords transfer so easily between them.
+              </p>
+              <p style={{color:"#b8b8d0",fontSize:"13px",fontFamily:"sans-serif",lineHeight:1.6,margin:0}}>
+                Tap any key: the chord one step clockwise lights up as its V, one step counter-clockwise as its IV. The inner ring is each key's relative minor.
+              </p>
+              <button style={{...S.startBtn,marginTop:"16px",marginBottom:0}} onClick={()=>setShowCircleHelp(false)}>Got it</button>
+            </div>
+          </div>
+        )}
+
+        <NavBar/>
+      </div>
+    );
+  }
+
+  // CHORD QUIZ
+  if(tab==="drill"&&drillSub==="chords"&&question){
     const posColor=quizMode==="major"?MAJOR_PC:MINOR_PC;
     return(
       <div style={S.page}>
         {showStreak&&<div style={S.streakBanner}>🔥 {streak} in a row!</div>}
         <div style={S.card}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"}}>
-            <div style={{...S.chip,fontSize:"11px",color:quizMode==="major"?"#c9a84c":"#7eb8f7"}}>
-              {quizMode==="major"?"🌞 Major":"🌙 Minor"}
+          <DrillSubNav/>
+          <div style={{display:"flex",gap:"6px",marginBottom:"8px"}}>
+            {["major","minor"].map(m=>(
+              <button key={m} style={{...S.filterBtn,...(quizMode===m?S.filterOn:{}),flex:1}} onClick={()=>{setFocusKey(null);setQuizMode(m);}}>
+                {m==="major"?"🌞 Major":"🌙 Minor"}
+              </button>
+            ))}
+          </div>
+          {focusKey?(
+            <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"10px"}}>
+              <span style={S.weakChip}>🎯 Focused on {focusKey}</span>
+              <button style={S.peekBtn} onClick={()=>setFocusKey(null)}>Clear focus</button>
             </div>
+          ):quizMode==="major"&&(
+            <div style={{display:"flex",gap:"6px",marginBottom:"10px",flexWrap:"wrap"}}>
+              {["all","naturals","sharps","flats"].map(f=>(
+                <button key={f} style={{...S.filterBtn,...(filter===f?S.filterOn:{}),fontSize:"11px",padding:"4px 10px"}} onClick={()=>setFilter(f)}>
+                  {f==="all"?"All":f.charAt(0).toUpperCase()+f.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
+          <div style={{display:"flex",justifyContent:"center",gap:"10px",alignItems:"center",marginBottom:"8px"}}>
             <div style={S.chip}>{score.correct}/{score.total}</div>
             <div style={{...S.chip,color:"#c9a84c"}}>{streak>0?`🔥 ${streak}`:"—"}</div>
           </div>
           <div style={S.progressBar}>
             <div style={{...S.progressFill,width:`${accuracy}%`,background:accuracy>=80?"#4ade80":accuracy>=60?"#facc15":"#f87171"}}/>
           </div>
+          {timedMode&&!selected&&(
+            <CountdownBar seconds={8} onTimeout={()=>handleAnswer(TIMEOUT_SENTINEL)}/>
+          )}
           <div style={{textAlign:"center",marginBottom:"24px"}}>
             <div style={S.qLabel}>What is the</div>
             <div style={{...S.posBadge,color:posColor[question.position]||"#c9a84c",borderColor:posColor[question.position]||"#c9a84c"}}>
@@ -918,15 +1283,21 @@ export default function ChordQuiz(){
           {selected&&(
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px",flexWrap:"wrap",gap:"8px"}}>
               <div style={{fontSize:"15px",fontWeight:"bold",fontFamily:"sans-serif",color:isCorrect?"#4ade80":"#f87171"}}>
-                {isCorrect?"✓ Correct!":`✗ It's ${question.correct}`}
+                {isCorrect?"✓ Correct!":selected===TIMEOUT_SENTINEL?`⏳ Time's up — it's ${question.correct}`:`✗ It's ${question.correct}`}
               </div>
               <div style={{display:"flex",gap:"6px"}}>
                 {BARI_CHORDS[question.correct]&&(
-                  <button style={S.peekBtn} onClick={()=>{setSelectedChord(question.correct);setDiagGroup(Object.keys(BARI_CHORDS[question.correct])?CHORD_GROUPS.find(g=>g.chords.includes(question.correct))?.label||"Major":"Major");setTab("chords");}}>🖐 Fingering</button>
+                  <button style={S.peekBtn} onClick={()=>setShowFingering(f=>!f)}>🖐 {showFingering?"Hide":"Fingering"}</button>
                 )}
-                <button style={S.peekBtn} onClick={()=>{setHighlightKey(question.key);setChartMode(quizMode);setTab("chart");}}>See row</button>
+                <button style={S.peekBtn} onClick={()=>{setHighlightKey(question.key);setChartMode(quizMode);setKeysSub("charts");setTab("keys");}}>See row</button>
                 <button style={S.nextBtn} onClick={nextQuestion}>Next →</button>
               </div>
+            </div>
+          )}
+
+          {showFingering&&BARI_CHORDS[question.correct]&&(
+            <div style={{display:"flex",justifyContent:"center",margin:"4px 0 16px"}}>
+              <ChordDiagram chordName={question.correct} size="md"/>
             </div>
           )}
 
@@ -943,11 +1314,12 @@ export default function ChordQuiz(){
   }
 
   // THEORY QUIZ
-  if(tab==="theory"){
+  if(tab==="drill"&&drillSub==="theory"){
     return(
       <div style={S.page}>
         {showStreak&&<div style={S.streakBanner}>🔥 {theoryStreak} in a row!</div>}
         <div style={S.card}>
+          <DrillSubNav/>
           {/* Header */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}}>
             <div style={{...S.chip,fontSize:"11px",color:"#7eb8f7"}}>🧠 Theory</div>
@@ -959,6 +1331,10 @@ export default function ChordQuiz(){
           <div style={S.progressBar}>
             <div style={{...S.progressFill,width:`${theoryAccuracy}%`,background:theoryAccuracy>=80?"#4ade80":theoryAccuracy>=60?"#facc15":"#f87171"}}/>
           </div>
+
+          {timedMode&&theoryQ&&!theorySelected&&(
+            <CountdownBar seconds={8} onTimeout={()=>handleTheoryAnswer(TIMEOUT_CHOICE)}/>
+          )}
 
           {/* Category filter */}
           <div style={{display:"flex",gap:"6px",flexWrap:"wrap",marginBottom:"14px"}}>
@@ -1011,7 +1387,7 @@ export default function ChordQuiz(){
             {theorySelected&&(
               <div style={{background:"#13131c",borderRadius:"12px",padding:"14px",marginBottom:"12px",border:`1px solid ${theoryCorrect?"#4ade8044":"#f8717144"}`}}>
                 <div style={{fontSize:"15px",fontWeight:"bold",fontFamily:"sans-serif",color:theoryCorrect?"#4ade80":"#f87171",marginBottom:"8px"}}>
-                  {theoryCorrect?"✓ Correct!":"✗ Not quite"}
+                  {theoryCorrect?"✓ Correct!":theorySelected===TIMEOUT_CHOICE?"⏳ Time's up":"✗ Not quite"}
                 </div>
                 <p style={{color:"#9999bb",fontSize:"13px",fontFamily:"sans-serif",margin:"0 0 12px",lineHeight:1.5}}>
                   {theoryQ.explain}
@@ -1034,8 +1410,72 @@ export default function ChordQuiz(){
     );
   }
 
+  // SKIP-A-LETTER DRILL
+  if(tab==="drill"&&drillSub==="skip"&&skipQ){
+    return(
+      <div style={S.page}>
+        {showStreak&&<div style={S.streakBanner}>🔥 {skipStreak} in a row!</div>}
+        <div style={S.card}>
+          <DrillSubNav/>
+          <div style={{display:"flex",justifyContent:"center",gap:"10px",alignItems:"center",marginBottom:"8px"}}>
+            <div style={S.chip}>{skipScore.correct}/{skipScore.total}</div>
+            <div style={{...S.chip,color:"#c9a84c"}}>{skipStreak>0?`🔥 ${skipStreak}`:"—"}</div>
+          </div>
+          <div style={S.progressBar}>
+            <div style={{...S.progressFill,width:`${skipAccuracy}%`,background:skipAccuracy>=80?"#4ade80":skipAccuracy>=60?"#facc15":"#f87171"}}/>
+          </div>
+          {timedMode&&!skipSelected&&(
+            <CountdownBar seconds={8} onTimeout={()=>handleSkipAnswer(TIMEOUT_SENTINEL)}/>
+          )}
+          <div style={{textAlign:"center",marginBottom:"20px"}}>
+            <div style={S.qLabel}>Stack this chord in thirds</div>
+            <div style={S.keyBig}>{skipQ.label}</div>
+          </div>
+          <div style={S.grid2}>
+            {skipQ.choices.map(c=>{
+              let st={...S.choiceBtn,fontSize:"15px"};
+              if(skipSelected){
+                if(c===skipQ.stack) st={...st,...S.cCorrect};
+                else if(c===skipSelected) st={...st,...S.cWrong};
+                else st={...st,opacity:0.25};
+              }
+              return <button key={c} style={st} onClick={()=>handleSkipAnswer(c)}>{c}</button>;
+            })}
+          </div>
+          {skipSelected&&(
+            <div style={{marginBottom:"12px"}}>
+              <div style={{fontSize:"15px",fontWeight:"bold",fontFamily:"sans-serif",color:skipCorrect?"#4ade80":"#f87171",marginBottom:"10px"}}>
+                {skipCorrect?"✓ Correct!":skipSelected===TIMEOUT_SENTINEL?"⏳ Time's up":"✗ Not quite"}
+              </div>
+              {!skipCorrect&&(
+                <div style={{background:"#13131c",borderRadius:"12px",padding:"14px",marginBottom:"12px",border:"1px solid #f8717144"}}>
+                  <div style={{fontSize:"20px",fontFamily:"'Georgia',serif",textAlign:"center",letterSpacing:"2px",marginBottom:"8px"}}>
+                    {skipQ.spanLetters.map((L,i)=>(
+                      <span key={i} style={{margin:"0 4px",color:i%2===0?"#4ade80":"#555570",textDecoration:i%2===0?"none":"line-through"}}>{L}</span>
+                    ))}
+                  </div>
+                  <p style={{color:"#9999bb",fontSize:"13px",fontFamily:"sans-serif",margin:0,textAlign:"center"}}>
+                    Skip a letter each time: <b style={{color:"#f5e6c8"}}>{skipQ.stack}</b>
+                  </p>
+                </div>
+              )}
+              <button style={S.nextBtn} onClick={nextSkipQuestion}>Next →</button>
+            </div>
+          )}
+          {skipWeakIds.length>0&&(
+            <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:"6px",borderTop:"1px solid #2e2e42",paddingTop:"10px"}}>
+              <span style={{color:"#6b6b8a",fontSize:"11px",fontFamily:"sans-serif",textTransform:"uppercase"}}>Drilling: </span>
+              <span style={S.weakChip}>{skipWeakIds.length} chord{skipWeakIds.length>1?"s":""}</span>
+            </div>
+          )}
+        </div>
+        <NavBar/>
+      </div>
+    );
+  }
+
   // KEYS EXPLORER
-  if(tab==="keys"){
+  if(tab==="keys"&&keysSub==="explorer"){
     const isMajor = keysMode==="major";
     const chart   = isMajor ? MAJOR_CHART : MINOR_CHART;
     const keyList = Object.keys(chart);
@@ -1051,6 +1491,7 @@ export default function ChordQuiz(){
     return(
       <div style={S.page}>
         <div style={S.card}>
+          <KeysSubNav/>
           <div style={{fontSize:"28px",textAlign:"center",marginBottom:"6px"}}>🗝️</div>
           <h1 style={{...S.title,fontSize:"22px",marginBottom:"4px"}}>Key Explorer</h1>
           <p style={{...S.sub,marginBottom:"12px"}}>Pick a key · see every chord + fingering</p>
@@ -1177,6 +1618,23 @@ export default function ChordQuiz(){
             })}
           </div>
 
+          <div style={{marginTop:"18px"}}>
+            <div style={S.sectionLabel}>Sounds like</div>
+            <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+              {(isMajor?PROGRESSION_TEMPLATES.major:PROGRESSION_TEMPLATES.minor).map((tpl,i)=>(
+                <div key={i} style={{background:"#13131c",border:"1px solid #2a2a3e",borderRadius:"12px",padding:"12px 14px"}}>
+                  <div style={{color:"#c9a84c",fontSize:"13px",fontWeight:"bold",fontFamily:"'Georgia',serif",marginBottom:"4px"}}>
+                    {tpl.roman.join("–")} in {validKey} {isMajor?"major":"minor"}
+                  </div>
+                  <div style={{color:"#8888aa",fontSize:"12px",fontFamily:"sans-serif",marginBottom:"6px"}}>
+                    {tpl.roman.map(r=>keyChords[r]).join(" – ")}
+                  </div>
+                  <div style={{color:"#7777aa",fontSize:"12px",fontFamily:"sans-serif",lineHeight:1.5}}>{tpl.mood}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <p style={{color:"#444460",fontSize:"10px",fontFamily:"sans-serif",textAlign:"center",marginTop:"12px"}}>
             Tap any chord to show fingering · 🔥 = essential chord for this key
           </p>
@@ -1187,7 +1645,7 @@ export default function ChordQuiz(){
   }
 
   // CHARTS
-  if(tab==="chart"){
+  if(tab==="keys"&&keysSub==="charts"){
     const isMajor=chartMode==="major";
     const displayChart=isMajor?MAJOR_CHART:MINOR_CHART;
     const displayKeys=isMajor?MAJOR_KEYS:MINOR_KEYS;
@@ -1197,6 +1655,7 @@ export default function ChordQuiz(){
     return(
       <div style={S.page}>
         <div style={{...S.card,padding:"16px 10px"}}>
+          <KeysSubNav/>
           <div style={{display:"flex",gap:"8px",marginBottom:"12px"}}>
             {["major","minor"].map(m=>(
               <button key={m} style={{...S.modeBtn,...(chartMode===m?S.modeBtnOn:{}),flex:1}}
@@ -1258,60 +1717,8 @@ export default function ChordQuiz(){
   }
 
   // CHORD DIAGRAMS
-  if(tab==="chords"){
-    const currentGroup=CHORD_GROUPS.find(g=>g.label===diagGroup)||CHORD_GROUPS[0];
-    return(
-      <div style={S.page}>
-        <div style={S.card}>
-          <div style={{fontSize:"30px",textAlign:"center",marginBottom:"6px"}}>🖐</div>
-          <h1 style={{...S.title,fontSize:"22px",marginBottom:"2px"}}>Baritone Chord Diagrams</h1>
-          <p style={{...S.sub,marginBottom:"14px"}}>DGBE · numbers = finger (1=index) · ○=open</p>
-          <div style={{display:"flex",gap:"6px",marginBottom:"14px",flexWrap:"wrap"}}>
-            {CHORD_GROUPS.map(g=>(
-              <button key={g.label} style={{...S.filterBtn,...(diagGroup===g.label?S.filterOn:{})}}
-                onClick={()=>{setDiagGroup(g.label);setSelectedChord(null);}}>
-                {g.label}
-              </button>
-            ))}
-          </div>
-          {selectedChord&&BARI_CHORDS[selectedChord]&&(
-            <div style={{background:"#0f0f14",borderRadius:"16px",padding:"16px",marginBottom:"14px",display:"flex",flexDirection:"column",alignItems:"center",border:"1px solid #c9a84c44"}}>
-              <ChordDiagram chordName={selectedChord} size="lg"/>
-              <div style={{marginTop:"10px",display:"flex",gap:"10px",justifyContent:"center",flexWrap:"wrap"}}>
-                <span style={{color:"#4ade80",fontSize:"11px",fontFamily:"sans-serif"}}>○ Open string</span>
-                <span style={{color:"#c9a84c",fontSize:"11px",fontFamily:"sans-serif"}}>● Fretted (# = finger)</span>
-                <span style={{color:"#f87171",fontSize:"11px",fontFamily:"sans-serif"}}>× Muted</span>
-              </div>
-            </div>
-          )}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"8px"}}>
-            {currentGroup.chords.map(name=>{
-              const hasDiag=!!BARI_CHORDS[name];
-              const isSel=selectedChord===name;
-              return(
-                <button key={name}
-                  style={{background:isSel?"#1a1a0e":hasDiag?"#13131c":"#0e0e18",border:`1px solid ${isSel?"#c9a84c":hasDiag?"#2e2e42":"#1a1a26"}`,borderRadius:"12px",padding:"8px 4px",cursor:hasDiag?"pointer":"default",display:"flex",flexDirection:"column",alignItems:"center"}}
-                  onClick={()=>hasDiag&&setSelectedChord(isSel?null:name)}
-                >
-                  {hasDiag
-                    ? <ChordDiagram chordName={name} size="sm"/>
-                    : <div style={{color:"#333350",fontSize:"13px",fontFamily:"'Georgia',serif",padding:"18px 0",textAlign:"center"}}>{name}<br/><span style={{fontSize:"9px",color:"#2a2a40"}}>soon</span></div>
-                  }
-                </button>
-              );
-            })}
-          </div>
-          <p style={{color:"#3a3a55",fontSize:"10px",fontFamily:"sans-serif",textAlign:"center",marginTop:"12px"}}>
-            1=index · 2=middle · 3=ring · 4=pinky
-          </p>
-        </div>
-        <NavBar/>
-      </div>
-    );
-  }
-
   // CHEAT SHEET
-  if(tab==="cheat") return(
+  if(tab==="tips") return(
     <div style={S.page}>
       <div style={S.card}>
         <div style={{fontSize:"30px",textAlign:"center",marginBottom:"6px"}}>💡</div>
@@ -1389,4 +1796,14 @@ const S={
   navBtn:{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:"2px",padding:"4px 8px",opacity:0.35},
   navActive:{opacity:1},
   navLabel:{fontSize:"9px",color:"#f5e6c8",fontFamily:"sans-serif",letterSpacing:"0.3px"},
+  dailyBanner:{display:"flex",justifyContent:"space-between",alignItems:"center",background:"#1e1a0e",border:"1px solid #5a4a1a",borderRadius:"12px",padding:"10px 14px",color:"#f5d97a",fontSize:"13px",fontFamily:"sans-serif",cursor:"pointer"},
+  helpBtn:{background:"#252533",border:"1px solid #3a3a52",borderRadius:"50%",color:"#c9a84c",width:"30px",height:"30px",fontSize:"14px",cursor:"pointer",fontFamily:"sans-serif"},
+  circleTip:{background:"#13202e",border:"1px solid #2a5070",color:"#9dc8f0",fontSize:"12px",fontFamily:"sans-serif",borderRadius:"10px",padding:"10px 12px",marginBottom:"10px",cursor:"pointer",lineHeight:1.4},
+  slideUpPanel:{position:"fixed",left:"50%",bottom:"70px",width:"calc(100% - 32px)",maxWidth:"448px",marginLeft:"-224px",background:"#1a1a24",border:"1px solid #c9a84c44",borderRadius:"18px",padding:"20px",boxShadow:"0 -8px 30px rgba(0,0,0,0.5)",transition:"transform 0.25s ease",zIndex:60},
+  slideUpClose:{position:"absolute",top:"12px",right:"14px",background:"none",border:"none",color:"#6b6b8a",fontSize:"16px",cursor:"pointer"},
+  anchorChip:{flex:1,background:"#13131c",border:"1px solid #2e2e42",borderRadius:"10px",padding:"8px",textAlign:"center"},
+  helpOverlay:{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:80,padding:"20px"},
+  helpCard:{background:"#1a1a24",border:"1px solid #2e2e42",borderRadius:"16px",padding:"20px",maxWidth:"360px"},
+  countdownTrack:{height:"4px",background:"#252533",borderRadius:"2px",overflow:"hidden",marginBottom:"14px"},
+  countdownFill:{height:"100%",background:"#c9a84c"},
 };
