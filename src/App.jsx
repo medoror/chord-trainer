@@ -25,7 +25,7 @@ import React, { useState, useEffect, useCallback } from "react";
 // B: 0=B 1=C  2=C# 3=D  4=D# 5=E  6=F  7=F#
 // E: 0=E 1=F  2=F# 3=G  4=G# 5=A  6=A# 7=B
 
-const BARI_CHORDS = {
+export const BARI_CHORDS = {
   // ── NATURAL / SHARP KEY MAJORS ──────────────────────────────────────────
   // C: E G C E
   "C":  {frets:[2,0,1,0],fingers:[2,0,1,0],baseFret:1,label:"C",notes:"E G C E"},
@@ -44,17 +44,17 @@ const BARI_CHORDS = {
   // F#/Gb: F# A# C# F#  — same shape as B moved up: barre 2
   "F#": {frets:[4,3,2,2],fingers:[4,3,1,1],baseFret:1,barres:[{fret:2,from:2,to:3}],label:"F#",notes:"F# A# C# F#"},
   // C#/Db: C# F Ab C#  — barre 4, A-shape
-  "C#": {frets:[1,1,1,4],fingers:[1,1,1,4],baseFret:4,barres:[{fret:1,from:0,to:2}],label:"C#",notes:"C# G# C F"},
+  "C#": {frets:[3,1,2,1],fingers:[3,1,2,1],baseFret:1,label:"C#",notes:"F Ab C# F"},
   // G#/Ab: Ab C Eb Ab  — barre 4, E-shape
-  "G#": {frets:[1,1,3,1],fingers:[1,1,3,1],baseFret:4,barres:[{fret:1,from:0,to:3}],label:"G#",notes:"Eb Ab C Eb"},
+  "G#": {frets:[1,1,1,4],fingers:[1,1,1,4],baseFret:1,label:"G#",notes:"Eb Ab C Ab"},
   // Bb: F Bb D F  — barre 1 + ring barre 3
   "Bb": {frets:[3,3,3,1],fingers:[3,3,3,1],baseFret:1,barres:[{fret:1,from:3,to:3},{fret:3,from:0,to:2}],label:"Bb",notes:"F Bb D F"},
   // Eb: barre 1, B-shape moved
   "Eb": {frets:[1,3,4,3],fingers:[1,3,4,2],baseFret:1,label:"Eb",notes:"Eb Bb Eb G"},
   // Ab: same as G# — barre 4
-  "Ab": {frets:[1,1,3,1],fingers:[1,1,3,1],baseFret:4,barres:[{fret:1,from:0,to:3}],label:"Ab",notes:"Eb Ab C Eb"},
-  // Db: same as C# — barre 4
-  "Db": {frets:[1,1,1,4],fingers:[1,1,1,4],baseFret:4,barres:[{fret:1,from:0,to:2}],label:"Db",notes:"Db Ab Db F"},
+  "Ab": {frets:[1,1,1,4],fingers:[1,1,1,4],baseFret:1,label:"Ab",notes:"Eb Ab C Ab"},
+  // Db: same as C# — 3121
+  "Db": {frets:[3,1,2,1],fingers:[3,1,2,1],baseFret:1,label:"Db",notes:"F Ab Db F"},
   // Gb: same as F# shape
   "Gb": {frets:[4,3,2,2],fingers:[4,3,1,1],baseFret:1,barres:[{fret:2,from:2,to:3}],label:"Gb",notes:"Gb Bb Db Gb"},
   // Cb = B enharmonic
@@ -66,9 +66,9 @@ const BARI_CHORDS = {
   // Am: E A C E
   "Am": {frets:[2,2,1,0],fingers:[2,3,1,0],baseFret:1,label:"Am",notes:"E A C E"},
   // Bm: E B D F#  (barre 2)
-  "Bm": {frets:[2,4,3,2],fingers:[1,4,3,1],baseFret:1,barres:[{fret:2,from:0,to:3}],label:"Bm",notes:"E B D F#"},
+  "Bm": {frets:[0,4,3,2],fingers:[0,3,2,1],baseFret:1,label:"Bm",notes:"D B D F#"},
   // Cm: F C Eb G  (barre 3)
-  "Cm": {frets:[3,5,5,3],fingers:[1,3,4,2],baseFret:1,barres:[{fret:3,from:0,to:3}],label:"Cm",notes:"F C Eb G"},
+  "Cm": {frets:[1,0,1,3],fingers:[1,0,2,4],baseFret:1,label:"Cm",notes:"Eb G C G"},
   // Dm: D A D F
   "Dm": {frets:[0,2,3,1],fingers:[0,2,3,1],baseFret:1,label:"Dm",notes:"D A D F"},
   // Em: E G B E
@@ -81,60 +81,47 @@ const BARI_CHORDS = {
   "F#m":{frets:[4,2,2,2],fingers:[4,1,2,3],baseFret:1,barres:[{fret:2,from:1,to:3}],label:"F#m",notes:"F# A C# F#"},
   "Gbm":{frets:[4,2,2,2],fingers:[4,1,2,3],baseFret:1,barres:[{fret:2,from:1,to:3}],label:"Gbm (=F#m)",notes:"Gb Bbb Db Gb"},
   // C#m: barre 4, Am-shape
-  "C#m":{frets:[1,3,2,1],fingers:[1,3,2,1],baseFret:4,barres:[{fret:1,from:0,to:3}],label:"C#m",notes:"C# G# C# E"},
+  "C#m":{frets:[2,1,2,0],fingers:[2,1,3,0],baseFret:1,label:"C#m",notes:"E G# C# E"},
   // Ebm: same as D#m, barre 6, Am-shape
-  "Ebm":{frets:[1,3,2,1],fingers:[1,3,2,1],baseFret:6,barres:[{fret:1,from:0,to:3}],label:"Ebm",notes:"Eb Bb Eb Gb"},
+  "Ebm":{frets:[4,3,4,2],fingers:[3,2,4,1],baseFret:1,label:"Ebm",notes:"Gb Bb Eb Gb"},
   // G#m/Abm: barre 4, Em-shape offset
-  "G#m":{frets:[1,3,2,1],fingers:[1,3,2,1],baseFret:4,barres:[{fret:1,from:0,to:3}],label:"G#m",notes:"G# B D# G#"},
-  "Abm":{frets:[1,3,2,1],fingers:[1,3,2,1],baseFret:4,barres:[{fret:1,from:0,to:3}],label:"Abm (=G#m)",notes:"Ab B Eb Ab"},
-  // Bbm: barre 1, Bm-shape: D@3=F,G@4=Bb,B@3=Db,E@1=F → F Bb Db F
-  "Bbm":{frets:[3,4,3,1],fingers:[3,4,2,1],baseFret:1,barres:[{fret:1,from:3,to:3}],label:"Bbm",notes:"F Bb Db F"},
+  "G#m":{frets:[1,1,0,-1],fingers:[1,2,0,0],baseFret:1,label:"G#m",notes:"D# G# B"},
+  "Abm":{frets:[1,1,0,-1],fingers:[1,2,0,0],baseFret:1,label:"Abm (=G#m)",notes:"Eb Ab B"},
+  // Bbm: primary 3321 position
+  "Bbm":{frets:[3,3,2,1],fingers:[3,4,2,1],baseFret:1,label:"Bbm",notes:"F Bb Db F"},
   // D#m = Ebm (enharmonic)
-  "D#m":{frets:[1,3,2,1],fingers:[1,3,2,1],baseFret:6,barres:[{fret:1,from:0,to:3}],label:"D#m (=Ebm)",notes:"Eb Bb Eb Gb"},
+  "D#m":{frets:[4,3,4,2],fingers:[3,2,4,1],baseFret:1,label:"D#m (=Ebm)",notes:"Gb Bb Eb Gb"},
   // A#m = Bbm (enharmonic)
-  "A#m":{frets:[3,4,3,1],fingers:[3,4,2,1],baseFret:1,barres:[{fret:1,from:3,to:3}],label:"A#m (=Bbm)",notes:"F Bb Db F"},
+  "A#m":{frets:[3,3,2,1],fingers:[3,4,2,1],baseFret:1,label:"A#m (=Bbm)",notes:"F Bb Db F"},
   // Dbm = C#m (enharmonic)
-  "Dbm":{frets:[1,3,2,1],fingers:[1,3,2,1],baseFret:4,barres:[{fret:1,from:0,to:3}],label:"Dbm (=C#m)",notes:"Db Ab Db Fb"},
+  "Dbm":{frets:[2,1,2,0],fingers:[2,1,3,0],baseFret:1,label:"Dbm (=C#m)",notes:"E Ab Db E"},
   // E#m = Fm (enharmonic)
   "E#m":{frets:[3,1,1,1],fingers:[4,1,1,1],baseFret:1,barres:[{fret:1,from:1,to:3}],label:"E#m (=Fm)",notes:"F Ab C F"},
   // B#dim = Cdim (enharmonic)
 
   // ── DIMINISHED CHORDS ───────────────────────────────────────────────────
   // Bdim: B D F  — [0,1,0,1]: D,Ab,B,F = Bdim7 (close voicing)
-  "Bdim": {frets:[0,1,0,1],fingers:[0,1,0,2],baseFret:1,label:"Bdim",notes:"D Ab B F"},
-  // C#dim/Dbdim: moveable dim shape up 1
-  "C#dim":{frets:[1,2,1,2],fingers:[1,3,2,4],baseFret:1,label:"C#dim",notes:"Eb A C G"},
-  // Ddim: D F Ab B
-  "Ddim": {frets:[0,3,0,3],fingers:[0,2,0,3],baseFret:1,label:"Ddim",notes:"D Bb B D"},
-  // Edim: E G Bb Db
-  "Edim": {frets:[2,3,2,3],fingers:[1,3,2,4],baseFret:1,label:"Edim",notes:"E Bb C# G"},
-  // F#dim/Gbdim
-  "F#dim":{frets:[0,1,3,1],fingers:[0,1,4,2],baseFret:1,label:"F#dim",notes:"D Ab C# F#"},
-  // G#dim/Abdim
-  "G#dim":{frets:[1,2,1,2],fingers:[1,3,2,4],baseFret:2,label:"G#dim",notes:"Eb A C G#"},
-  // A#dim/Bbdim
-  "A#dim":{frets:[1,2,1,2],fingers:[1,3,2,4],baseFret:3,label:"A#dim",notes:"F B D A#"},
-  // Adim
-  "Adim": {frets:[1,2,1,2],fingers:[1,3,2,4],baseFret:1,label:"Adim",notes:"Eb A C Gb"},
-  // Cdim
-  "Cdim": {frets:[0,1,0,1],fingers:[0,1,0,2],baseFret:2,label:"Cdim",notes:"Eb A B F"},
-  // Fdim
-  "Fdim": {frets:[1,2,1,2],fingers:[1,3,2,4],baseFret:1,label:"Fdim",notes:"Eb A B F"},
-  // Gdim
-  "Gdim": {frets:[0,3,2,3],fingers:[0,2,1,3],baseFret:1,label:"Gdim",notes:"D Bb C# G"},
-  // Bbdim = A#dim
-  "Bbdim":{frets:[1,2,1,2],fingers:[1,3,2,4],baseFret:3,label:"Bbdim",notes:"F B D Bb"},
-  // E#dim = Fdim
-  "E#dim":{frets:[1,2,1,2],fingers:[1,3,2,4],baseFret:1,label:"E#dim (=Fdim)",notes:"Eb A B F"},
-  // B#dim = Cdim
-  "B#dim":{frets:[0,1,0,1],fingers:[0,1,0,2],baseFret:2,label:"B#dim (=Cdim)",notes:"Eb A B F"},
-  // D#dim = Ebdim
-  "D#dim":{frets:[0,3,0,3],fingers:[0,2,0,3],baseFret:2,label:"D#dim",notes:"Eb Bb C Ab"},
+  "Bdim": {frets:[0,4,0,1],fingers:[0,4,0,1],baseFret:1,label:"Bdim",notes:"D B B F"},
+  // C#dim/Dbdim: primary 2020 position
+  "C#dim":{frets:[2,0,2,0],fingers:[1,0,2,0],baseFret:1,label:"C#dim",notes:"E G C# E"},
+  "Ddim": {frets:[0,1,3,1],fingers:[0,1,3,2],baseFret:1,label:"Ddim",notes:"D Ab D F"},
+  "Edim": {frets:[2,3,5,3],fingers:[1,2,4,3],baseFret:1,label:"Edim",notes:"E Bb E G"},
+  "F#dim":{frets:[4,2,1,2],fingers:[4,2,1,3],baseFret:1,label:"F#dim",notes:"F# A C F#"},
+  "G#dim":{frets:[0,1,0,4],fingers:[0,1,0,4],baseFret:1,label:"G#dim",notes:"D G# B G#"},
+  "A#dim":{frets:[2,3,2,0],fingers:[2,1,3,0],baseFret:1,label:"A#dim",notes:"E A# C# E"},
+  "Adim": {frets:[1,2,1,-1],fingers:[1,3,2,0],baseFret:1,label:"Adim",notes:"Eb A C"},
+  "Cdim": {frets:[1,-1,1,2],fingers:[1,0,2,3],baseFret:1,label:"Cdim",notes:"Eb C Gb"},
+  "Fdim": {frets:[3,1,0,1],fingers:[3,1,0,2],baseFret:1,label:"Fdim",notes:"F Ab B F"},
+  "Gdim": {frets:[-1,3,2,3],fingers:[0,2,1,3],baseFret:1,label:"Gdim",notes:"Bb Db G"},
+  "Bbdim":{frets:[2,3,2,0],fingers:[2,1,3,0],baseFret:1,label:"Bbdim",notes:"E Bb Db E"},
+  "E#dim":{frets:[3,1,0,1],fingers:[3,1,0,2],baseFret:1,label:"E#dim (=Fdim)",notes:"F Ab B F"},
+  "B#dim":{frets:[1,-1,1,2],fingers:[1,0,2,3],baseFret:1,label:"B#dim (=Cdim)",notes:"Eb C Gb"},
+  "D#dim":{frets:[1,2,-1,2],fingers:[1,2,0,3],baseFret:1,label:"D#dim",notes:"Eb A Gb"},
 
   // ── 7TH CHORDS ──────────────────────────────────────────────────────────
-  "A7": {frets:[0,2,0,0],fingers:[0,1,0,0],baseFret:1,label:"A7",notes:"D A B E"},
-  "B7": {frets:[0,2,0,2],fingers:[0,2,0,3],baseFret:1,label:"B7",notes:"D A B F#"},
-  "C7": {frets:[0,3,1,0],fingers:[0,3,1,0],baseFret:1,label:"C7",notes:"D Bb C E"},
+  "A7": {frets:[2,2,2,3],fingers:[1,1,1,2],baseFret:1,label:"A7",notes:"E A C# G"},
+  "B7": {frets:[1,2,0,2],fingers:[1,2,0,3],baseFret:1,label:"B7",notes:"Eb A B Gb"},
+  "C7": {frets:[2,3,1,3],fingers:[2,3,1,4],baseFret:1,label:"C7",notes:"E Bb C G"},
   "D7": {frets:[0,2,1,2],fingers:[0,2,1,3],baseFret:1,label:"D7",notes:"D A C F#"},
   "E7": {frets:[0,1,0,0],fingers:[0,1,0,0],baseFret:1,label:"E7",notes:"D G# B E"},
   "F7": {frets:[1,2,1,1],fingers:[1,3,1,1],baseFret:1,barres:[{fret:1,from:0,to:3}],label:"F7",notes:"Eb A C F"},
