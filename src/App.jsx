@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
+import "./fingeringQuiz.css";
+import CircleClockQuiz from "./CircleClockQuiz";
 
 // ── BARITONE CHORD DATA (DGBE tuning) ────────────────────────────────────────
 // Strings: D(0) G(1) B(2) E(3) — left to right
@@ -293,7 +295,7 @@ const CHEAT_SECTIONS=[
 ];
 
 // ── CHORD DIAGRAM ─────────────────────────────────────────────────────────────
-function ChordDiagram({ chordName, size="md" }) {
+function ChordDiagram({ chordName, size="md", showName=true }) {
   const chord = BARI_CHORDS[chordName];
   if (!chord) return (
     <div style={{textAlign:"center",padding:"16px 8px"}}>
@@ -320,15 +322,15 @@ function ChordDiagram({ chordName, size="md" }) {
 
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:"3px"}}>
-      <div style={{color:"#f5e6c8",fontSize:isLg?"17px":"13px",fontWeight:"bold",fontFamily:"'Georgia',serif"}}>
+      {showName && <div style={{color:"#f5e6c8",fontSize:isLg?"17px":"13px",fontWeight:"bold",fontFamily:"'Georgia',serif"}}>
         {chord.label}
-      </div>
+      </div>}
       {chord.baseFret > 1 && (
         <div style={{color:"#c9a84c",fontSize:"10px",fontFamily:"sans-serif",marginTop:"-2px"}}>
           fret {chord.baseFret}
         </div>
       )}
-      <svg width={svgW} height={svgH} style={{overflow:"visible"}}>
+      <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{overflow:"visible"}}>
         {/* Nut */}
         {showNut
           ? <rect x={padL} y={padT-5} width={totalW} height={6} rx={2} fill="#d4b96a"/>
@@ -400,7 +402,7 @@ function ChordDiagram({ chordName, size="md" }) {
         })}
       </svg>
       {/* Notes label on large */}
-      {isLg && chord.notes && (
+      {showName && isLg && chord.notes && (
         <div style={{color:"#555575",fontSize:"10px",fontFamily:"sans-serif",marginTop:"-4px"}}>
           {chord.notes}
         </div>
@@ -469,6 +471,76 @@ function buildDistractors(correct, allChordNames){
     if(fb && fb !== correct && !result.includes(fb)) result.push(fb);
   }
   return result;
+}
+
+// Keep the existing distractor strategy, but only offer renderable, distinct shapes.
+export function buildFingeringQuestion(allChordNames){
+  const names=[...new Set(allChordNames)].filter(name=>BARI_CHORDS[name]);
+  const correct=names[Math.floor(Math.random()*names.length)];
+  const shape=name=>JSON.stringify([BARI_CHORDS[name].baseFret,BARI_CHORDS[name].frets]);
+  if(!correct) throw new Error("Fingering Quiz needs at least four distinct chord shapes");
+  const choices=[correct];
+  const seen=new Set([shape(correct)]);
+  const candidates=[...buildDistractors(correct,names),...shuffle(names)];
+  for(const name of candidates){
+    if(!names.includes(name)||seen.has(shape(name))) continue;
+    choices.push(name);
+    seen.add(shape(name));
+    if(choices.length===4) break;
+  }
+  if(choices.length<4) throw new Error("Fingering Quiz needs at least four distinct chord shapes");
+  return {correct,choices:shuffle(choices)};
+}
+
+function FingeringQuiz({session,setSession}){
+  const {question,selected,score,streak}=session;
+  const answered=selected!==null;
+  const correct=selected===question.correct;
+  const answer=choice=>setSession(previous=>{
+    if(previous.selected!==null) return previous;
+    const right=choice===previous.question.correct;
+    return {...previous,selected:choice,
+      score:{correct:previous.score.correct+Number(right),total:previous.score.total+1},
+      streak:right?previous.streak+1:0};
+  });
+  return(
+    <div className="fingering-card" style={S.card}>
+      <h1 style={{...S.title,fontSize:"24px"}}>Fingering Quiz</h1>
+      <p className="fingering-intro" style={S.sub}>Match the chord name to its DGBE fingering.</p>
+      <div className="fingering-score" style={{display:"flex",justifyContent:"center",gap:"10px"}}>
+        <span style={S.chip}>Score: {score.correct}/{score.total}</span>
+        <span style={{...S.chip,color:"#c9a84c"}}>🔥 Streak: {streak}</span>
+      </div>
+      <h2 style={{...S.qLabel,color:"#f5e6c8",textAlign:"center",marginBottom:"10px"}}>
+        Which one of these is the <strong>{question.correct}</strong> chord?
+      </h2>
+      <div className="fingering-choices">
+        {question.choices.map((choice,index)=>{
+          const chord=BARI_CHORDS[choice];
+          const state=answered?(choice===question.correct?S.cCorrect:choice===selected?S.cWrong:{opacity:0.4}):{};
+          return(
+            <button className="fingering-choice" key={choice} type="button" disabled={answered}
+              aria-label={`Option ${index+1}: ${answered?choice+". ":""}Starting fret ${chord.baseFret}; D G B E string positions: ${chord.frets.map(f=>f===0?"open":f===-1?"muted":f).join(", ")}`}
+              style={{...S.choiceBtn,...state,padding:"6px 4px",cursor:answered?"default":"pointer"}}
+              onClick={()=>answer(choice)}>
+              <div aria-hidden="true"><ChordDiagram chordName={choice} size="md" showName={answered}/></div>
+              {answered&&<span style={{display:"block",fontSize:"12px",marginTop:"6px"}}>
+                {choice===question.correct?"✓ Correct":choice===selected?"✗ Your answer":""}
+              </span>}
+            </button>
+          );
+        })}
+      </div>
+      <div className="fingering-feedback">
+      <div role="status" style={{color:correct?"#4ade80":"#f87171",fontFamily:"sans-serif",fontWeight:"bold"}}>
+        {answered?(correct?"✓ Correct!":`✗ It's ${question.correct}`):""}
+      </div>
+      <button type="button" disabled={!answered} style={{...S.nextBtn,minHeight:"44px",opacity:answered?1:0.4}} onClick={()=>setSession(previous=>({
+        ...previous,question:buildFingeringQuestion(Object.keys(BARI_CHORDS)),selected:null,
+      }))}>Next →</button>
+      </div>
+    </div>
+  );
 }
 
 // ── SKIP-A-LETTER DRILL ───────────────────────────────────────────────────────
@@ -851,6 +923,10 @@ function CountdownBar({seconds=8,onTimeout}){
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 export default function ChordQuiz(){
+  const [fingeringSession,setFingeringSession]=useState(()=>({
+    question:buildFingeringQuestion(Object.keys(BARI_CHORDS)),selected:null,
+    score:{correct:0,total:0},streak:0,
+  }));
   const [tab,setTab]             = useState("circle");
   const [drillSub,setDrillSub]   = useState("chords"); // chords | theory
   const [keysSub,setKeysSub]     = useState("explorer"); // explorer | charts
@@ -1076,8 +1152,8 @@ export default function ChordQuiz(){
 
   const NavBar=()=>(
     <div style={S.navbar}>
-      {[["circle","🎵","Circle"],["drill","🎯","Drill"],["keys","🗝️","Keys"],["tips","💡","Tips"]].map(([id,icon,label])=>(
-        <button key={id} style={{...S.navBtn,...(tab===id?S.navActive:{})}} onClick={()=>setTab(id)}>
+      {[["circle","🎵","Circle"],["drill","🎯","Drill"],["fingering","🖐️","Fingering Quiz"],["keys","🗝️","Keys"],["tips","💡","Tips"]].map(([id,icon,label])=>(
+        <button key={id} style={{...S.navBtn,...((tab===id||(tab==="clock"&&id==="circle"))?S.navActive:{})}} onClick={()=>setTab(id)}>
           <span style={{fontSize:"16px"}}>{icon}</span>
           <span style={S.navLabel}>{label}</span>
         </button>
@@ -1109,6 +1185,20 @@ export default function ChordQuiz(){
           {label}
         </button>
       ))}
+    </div>
+  );
+
+  if(tab==="fingering") return(
+    <div className="fingering-page" style={S.page}>
+      <FingeringQuiz session={fingeringSession} setSession={setFingeringSession}/>
+      <NavBar/>
+    </div>
+  );
+
+  if(tab==="clock") return(
+    <div style={{...S.page,padding:"8px 12px 72px"}}>
+      <CircleClockQuiz onBack={()=>setTab("circle")}/>
+      <NavBar/>
     </div>
   );
 
@@ -1145,6 +1235,8 @@ export default function ChordQuiz(){
             <button style={S.helpBtn} onClick={()=>setShowCircleHelp(true)}>❓</button>
           </div>
           <p style={{...S.sub,marginBottom:"10px"}}>Tap a key to see how it connects to its neighbors</p>
+
+          <button style={{...S.outlineBtn,minHeight:"44px"}} onClick={()=>setTab("clock")}>🕒 Clock Position Quiz</button>
 
           {sessionCount===1&&!tooltipDismissed&&!circleKey&&(
             <div style={S.circleTip} onClick={()=>setTooltipDismissed(true)}>

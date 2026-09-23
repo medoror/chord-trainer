@@ -1,0 +1,51 @@
+.fingering-card .fingering-intro {
+  margin-bottom: 10px !important;
+}
+.fingering-score {
+  margin-bottom: 12px;
+}
+.fingering-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.fingering-choice {
+  /* Reserve room for revealed names and feedback so Next never jumps. */
+  height: 228px;
+  min-width: 0;
+}
+.fingering-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 14px;
+}
+@media (max-height: 900px), (max-width: 480px) {
+  .fingering-page {
+    padding: 8px 12px 72px !important;
+  }
+  .fingering-card {
+    padding: 14px 12px !important;
+  }
+  .fingering-card .fingering-intro {
+    margin-bottom: 8px !important;
+    font-size: 12px !important;
+  }
+  .fingering-score {
+    margin-bottom: 10px;
+  }
+  .fingering-choices {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .fingering-choice {
+    height: 204px;
+  }
+  .fingering-choice svg {
+    height: 132px;
+    width: auto;
+  }
+}

@@ -14,8 +14,14 @@
 ### 🗝️ Key Explorer
 Pick any major or minor key and see all 7 chords — Roman numeral position, chord name, popularity badge, and a tap-to-expand DGBE fretboard diagram with finger numbers.
 
+### 🕒 Clock Position Quiz
+Open **Circle → Clock Position Quiz** to practice placing keys on the circle-of-fifths clock. Choose major, minor, or mixed prompts; tap an hour for automatic feedback and the next round. Tracks session accuracy, streak, best streak, and the three most-missed keys. Changing mode resets the session.
+
 ### 🎯 Chord Quiz
 Flashcard-style quiz covering all 15 major and 12 minor keys. Wrong answers are musically tricky — same root with different quality (C vs C#m), or semitone neighbors — so you actually have to think about sharps and flats. Tracks weak spots and drills them back automatically.
+
+### 🖐️ Fingering Quiz
+Recognize a chord by choosing from four distinct DGBE fretboard diagrams. Names stay hidden until you answer; feedback reveals the correct shape. Track your score and streak for the current session, and tap Next when ready.
 
 ### 🧠 Theory Quiz
 25 questions across 4 categories:
@@ -91,10 +97,19 @@ npm run preview
 
 ---
 
+## Tests
+
+```bash
+npm test
+```
+
+Vitest checks clock-hour mapping, non-repeating rounds, mixed-mode probabilities, and miss ranking. It also checks that fingering questions offer four distinct playable shapes, include the answer exactly once, and vary their targets and answer positions.
+
 ## Project Structure
 chord-trainer/
 ├── src/
-│   ├── App.jsx          # Entire application (single component file)
+│   ├── App.jsx          # App navigation, chord data, and existing quizzes
+│   ├── fingeringQuiz.test.jsx # Fingering question tests
 │   └── main.jsx         # React entry point
 ├── index.html           # HTML shell
 ├── vite.config.js       # Vite config (host 0.0.0.0, port 3000)
