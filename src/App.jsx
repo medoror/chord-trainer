@@ -492,17 +492,63 @@ export function buildFingeringQuestion(allChordNames){
   return {correct,choices:shuffle(choices)};
 }
 
+// Playback begins from a quiz-button press, satisfying mobile browsers'
+// requirement for user-initiated audio.
+let toneContext=null;
+async function playChord(frets){
+  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+  if(!AudioContextClass) return;
+  toneContext??=new AudioContextClass();
+  if(toneContext.state==="suspended") await toneContext.resume();
+
+  const now=toneContext.currentTime;
+  const filter=toneContext.createBiquadFilter();
+  filter.type="lowpass";
+  filter.frequency.setValueAtTime(2600,now);
+  filter.Q.value=0.7;
+  filter.connect(toneContext.destination);
+
+  const makePartial=(midi,start,multiple,level)=>{
+    const frequency=440*Math.pow(2,(midi-69)/12);
+    const oscillator=toneContext.createOscillator();
+    const gain=toneContext.createGain();
+    oscillator.type="triangle";
+    oscillator.frequency.setValueAtTime(frequency*multiple,start);
+    gain.gain.setValueAtTime(0.0001,start);
+    gain.gain.exponentialRampToValueAtTime(level,start+0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001,start+1.15);
+    oscillator.connect(gain).connect(filter);
+    oscillator.start(start);
+    oscillator.stop(start+1.18);
+  };
+  // DGBE open-string MIDI pitches. Each playable string is brushed in order,
+  // producing the actual chord voicing shown by the quiz diagram.
+  const openStringMidis=[50,55,59,64];
+  frets.forEach((fret,index)=>{
+    if(fret<0) return;
+    const start=now+index*0.035;
+    const midi=openStringMidis[index]+fret;
+    makePartial(midi,start,1,0.09);
+    makePartial(midi,start,2,0.02);
+    makePartial(midi,start,3,0.007);
+  });
+}
+
 function FingeringQuiz({session,setSession}){
   const {question,selected,score,streak}=session;
   const answered=selected!==null;
   const correct=selected===question.correct;
-  const answer=choice=>setSession(previous=>{
-    if(previous.selected!==null) return previous;
-    const right=choice===previous.question.correct;
-    return {...previous,selected:choice,
-      score:{correct:previous.score.correct+Number(right),total:previous.score.total+1},
-      streak:right?previous.streak+1:0};
-  });
+  const answer=choice=>{
+    if(answered) return;
+    playChord(BARI_CHORDS[question.correct].frets);
+    setSession(previous=>{
+      if(previous.selected!==null) return previous;
+      const right=choice===previous.question.correct;
+      return {...previous,selected:choice,
+        score:{correct:previous.score.correct+Number(right),total:previous.score.total+1},
+        streak:right?previous.streak+1:0};
+    });
+  };
   return(
     <div className="fingering-card" style={S.card}>
       <h1 style={{...S.title,fontSize:"24px"}}>Fingering Quiz</h1>
@@ -535,9 +581,12 @@ function FingeringQuiz({session,setSession}){
       <div role="status" style={{color:correct?"#4ade80":"#f87171",fontFamily:"sans-serif",fontWeight:"bold"}}>
         {answered?(correct?"✓ Correct!":`✗ It's ${question.correct}`):""}
       </div>
-      <button type="button" disabled={!answered} style={{...S.nextBtn,minHeight:"44px",opacity:answered?1:0.4}} onClick={()=>setSession(previous=>({
-        ...previous,question:buildFingeringQuestion(Object.keys(BARI_CHORDS)),selected:null,
-      }))}>Next →</button>
+      <div style={{display:"flex",gap:"6px"}}>
+        {answered&&<button type="button" style={{...S.peekBtn,minHeight:"44px"}} onClick={()=>playChord(BARI_CHORDS[question.correct].frets)}>▶ Play chord</button>}
+        <button type="button" disabled={!answered} style={{...S.nextBtn,minHeight:"44px",opacity:answered?1:0.4}} onClick={()=>setSession(previous=>({
+          ...previous,question:buildFingeringQuestion(Object.keys(BARI_CHORDS)),selected:null,
+        }))}>Next →</button>
+      </div>
       </div>
     </div>
   );
